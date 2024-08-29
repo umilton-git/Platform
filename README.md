@@ -8,12 +8,13 @@ Prototype for a platform game with movement based on Smash Bros. Series.
 - Separation between platforms and floors (Can jump through platforms but not floors)
 - Running with an initial dash (double tap)
 - Air movement values separated from ground movement
+- Controller movement more similar to that of Smash series
 
 ## To Be Implemented
 - Ability to fall through platforms
 - More robust air movement system (Momentum?)
 - Character model to practice animations and animation blending with
-- Smash character movement is heavily rooted in analog stick controls; Should implement those as an alternative
+~~- Smash character movement is heavily rooted in analog stick controls; Should implement those as an alternative~~
 
 ## Might Be Implemented
 - Turning/Pivoting System (How useful is this in an actual platformer?)
