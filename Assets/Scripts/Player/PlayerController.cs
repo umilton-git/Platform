@@ -40,6 +40,11 @@ public class PlayerController : MonoBehaviour
     private float doubleTapTimeWindow = 0.3f;
     private KeyCode lastKeyPressed;
 
+    // Controller Input!
+    public float controllerDeadzone = 0.1f;
+    public string horizontalAxisName = "Horizontal";
+    public string jumpButtonName = "Jump";
+
     // Update is called once per frame
     void Update()
     {
@@ -55,19 +60,28 @@ public class PlayerController : MonoBehaviour
             currentJumpNum = 0;
         }
 
+        // Check for keyboard input
         if (Input.GetKey(KeyCode.LeftArrow))
         {
             Movement(KeyCode.LeftArrow, Vector3.left);
             isMoving = true;
         }
-
-        if (Input.GetKey(KeyCode.RightArrow))
+        else if (Input.GetKey(KeyCode.RightArrow))
         {
             Movement(KeyCode.RightArrow, Vector3.right);
             isMoving = true;
         }
 
-        if (Input.GetKeyDown(KeyCode.Space)) 
+        // Check for controller input
+        float horizontalInput = Input.GetAxis(horizontalAxisName);
+        if (Mathf.Abs(horizontalInput) > controllerDeadzone)
+        {
+            ControllerMovement(horizontalInput);
+            isMoving = true;
+        }
+
+        // Jump input (works for both keyboard and controller)
+        if (Input.GetButtonDown(jumpButtonName))
         {
             if (currentJumpNum < numJumps)
             {
@@ -76,7 +90,7 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        if(!isMoving) 
+        if (!isMoving) 
         {
             isRunning = false;
             initialDash = false;
@@ -166,6 +180,25 @@ public class PlayerController : MonoBehaviour
         {
             isRunning = false;
         }
+    }
+
+    void ControllerMovement(float input)
+    {
+        Vector3 direction = new Vector3(input, 0, 0);
+
+        // Determine speed based on input magnitude
+        float targetSpeed = Mathf.Abs(input) > 0.9f ? runSpeed : walkSpeed;
+
+        if (inAir)
+        {
+            targetSpeed = airSpeed;
+        }
+
+        // Smoothly interpolate to target speed
+        currentSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, dashAccel * Time.deltaTime);
+
+        transform.position += direction * currentSpeed * Time.deltaTime;
+        Debug.Log("Controller Speed: " + currentSpeed);
     }
 
     public bool IsGrounded()
