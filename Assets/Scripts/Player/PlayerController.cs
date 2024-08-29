@@ -40,6 +40,14 @@ public class PlayerController : MonoBehaviour
     private float doubleTapTimeWindow = 0.3f;
     private KeyCode lastKeyPressed;
 
+    // Controller Input!
+    public float controllerDeadzone = 0.1f;
+    public string horizontalAxisName = "Horizontal";
+    public string jumpButtonName = "Jump";
+    private float lastControllerInputTime = 0f;
+    private float lastControllerInputMagnitude = 0f;
+
+
     // Update is called once per frame
     void Update()
     {
@@ -55,19 +63,28 @@ public class PlayerController : MonoBehaviour
             currentJumpNum = 0;
         }
 
+        // Check for keyboard input
         if (Input.GetKey(KeyCode.LeftArrow))
         {
             Movement(KeyCode.LeftArrow, Vector3.left);
             isMoving = true;
         }
-
-        if (Input.GetKey(KeyCode.RightArrow))
+        else if (Input.GetKey(KeyCode.RightArrow))
         {
             Movement(KeyCode.RightArrow, Vector3.right);
             isMoving = true;
         }
 
-        if (Input.GetKeyDown(KeyCode.Space)) 
+        // Check for controller input
+        float horizontalInput = Input.GetAxis(horizontalAxisName);
+        if (Mathf.Abs(horizontalInput) > controllerDeadzone)
+        {
+            ControllerMovement(horizontalInput);
+            isMoving = true;
+        }
+
+        // Jump input (works for both keyboard and controller)
+        if (Input.GetButtonDown(jumpButtonName))
         {
             if (currentJumpNum < numJumps)
             {
@@ -76,7 +93,7 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        if(!isMoving) 
+        if (!isMoving) 
         {
             isRunning = false;
             initialDash = false;
@@ -165,6 +182,85 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyUp(key))
         {
             isRunning = false;
+        }
+    }
+
+    void ControllerMovement(float input)
+    {
+        Vector3 direction = new Vector3(input, 0, 0);
+        float inputMagnitude = Mathf.Abs(input);
+        float currentTime = Time.time;
+
+        // Adjust input based on deadzone
+        float adjustedMagnitude = Mathf.InverseLerp(controllerDeadzone, 1f, inputMagnitude);
+        Vector3 adjustedDirection = direction.normalized * adjustedMagnitude;
+
+        if (adjustedMagnitude > 0)
+        {
+            // Check for running condition
+            if (adjustedMagnitude > 0.9f && !inAir &&
+                (currentTime - lastControllerInputTime < doubleTapTimeWindow ||
+                 isRunning)) // This allows maintaining the running state
+            {
+                isRunning = true;
+                if (!initialDash && currentSpeed < runSpeed)
+                {
+                    initialDash = true;
+                }
+            }
+            else if (adjustedMagnitude <= 0.9f)
+            {
+                isRunning = false;
+                initialDash = false;
+            }
+
+            // Move the character
+            if (isRunning && !inAir)
+            {
+                if (initialDash)
+                {
+                    if (currentSpeed < dashSpeed)
+                    {
+                        currentSpeed = Mathf.MoveTowards(currentSpeed, dashSpeed, dashAccel * Time.deltaTime);
+                        if (currentSpeed >= dashSpeed)
+                        {
+                            Debug.Log("Reached dash speed: " + currentSpeed);
+                            initialDash = false;
+                        }
+                    }
+                }
+                else
+                {
+                    // Transition to run speed after initial dash
+                    currentSpeed = Mathf.MoveTowards(currentSpeed, runSpeed, dashAccel * Time.deltaTime);
+                }
+            }
+            else if (isRunning && inAir)
+            {
+                currentSpeed = runSpeed;
+            }
+            else if (!isRunning && inAir)
+            {
+                currentSpeed = airSpeed;
+            }
+            else
+            {
+                currentSpeed = Mathf.Lerp(0, walkSpeed, adjustedMagnitude);
+            }
+
+            transform.position += adjustedDirection * currentSpeed * Time.deltaTime;
+            Debug.Log("Controller Speed: " + currentSpeed + " Adjusted Magnitude: " + adjustedMagnitude);
+
+            lastControllerInputTime = currentTime;
+            lastControllerInputMagnitude = inputMagnitude;
+        }
+        else
+        {
+            // Input is within deadzone, treat as no input
+            isRunning = false;
+            initialDash = false;
+            currentSpeed = 0f;
+            lastControllerInputMagnitude = 0f;
         }
     }
 
